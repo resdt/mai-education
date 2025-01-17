@@ -6,6 +6,7 @@ int main() {
     std::cin >> n;
     std::vector<int> dp(n + 1);
     std::vector<int> from(n + 1);
+
     dp[1] = 0;
     for (int i = 2; i <= n; ++i) {
         dp[i] = dp[i - 1] + i;

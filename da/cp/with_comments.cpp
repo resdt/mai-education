@@ -1,4 +1,4 @@
-#include <bits/stdc++.h>      // Подключение "всего подряд" для ускорения написания кода
+#include <bits/stdc++.h>
 using namespace std;
 
 /**
