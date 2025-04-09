@@ -2,7 +2,9 @@ import streamlit as st
 
 
 def main():
-    pages = [st.Page("lab1.py", title="Лабораторная работа 1", icon=":material/science:")]
+    pages = [
+        st.Page("lab1.py", title="Лабораторная работа 1", icon=":material/science:")
+    ]
 
     display_pages = st.navigation(pages)
     display_pages.run()

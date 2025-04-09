@@ -6,11 +6,13 @@ import numpy as np
 
 @st.fragment
 def download_pdf_button(pdf_bytes, filename, label="Скачать PDF"):
-    st.download_button(label=label,
-                       icon=":material/download:",
-                       data=pdf_bytes,
-                       file_name=filename,
-                       mime="application/pdf")
+    st.download_button(
+        label=label,
+        icon=":material/download:",
+        data=pdf_bytes,
+        file_name=filename,
+        mime="application/pdf",
+    )
 
 
 def compile_latex_to_pdf(latex_str):
@@ -18,13 +20,15 @@ def compile_latex_to_pdf(latex_str):
         f.write(latex_str)
 
     try:
-        subprocess.run([
-            "pdflatex",
-            "-interaction=nonstopmode",
-            "-halt-on-error",
-            "-jobname=temp",
-            "temp.tex"
-        ])
+        subprocess.run(
+            [
+                "pdflatex",
+                "-interaction=nonstopmode",
+                "-halt-on-error",
+                "-jobname=temp",
+                "temp.tex",
+            ]
+        )
 
         with open(f"temp.pdf", "rb") as f:
             pdf_bytes = f.read()
@@ -87,8 +91,13 @@ def gauss_sequential(a):
             latex_content += r"\end{document}"
             return latex_content
 
-        st.subheader(f"Шаг {k+1}: выбор опорного элемента для столбца {k+1} -> строка {max_index+1}")
-        latex_content += rf"\subsection*{{Шаг {k+1}: выбор опорного элемента для столбца {k+1} -> строка {max_index+1}}}" + "\n"
+        st.subheader(
+            f"Шаг {k+1}: выбор опорного элемента для столбца {k+1} -> строка {max_index+1}"
+        )
+        latex_content += (
+            rf"\subsection*{{Шаг {k+1}: выбор опорного элемента для столбца {k+1} -> строка {max_index+1}}}"
+            + "\n"
+        )
 
         # Если необходимо, меняем местами текущую строку k и строку с максимальным элементом
         if max_index != k:
@@ -102,11 +111,13 @@ def gauss_sequential(a):
         pivot = a[k, k]
 
         # Прямой ход: зануляем элементы под опорным
-        for i in range(k+1, n):
+        for i in range(k + 1, n):
             factor = a[i, k] / pivot
             if factor != 0:
                 a[i, k:] = a[i, k:] - factor * a[k, k:]
-                st.write(f"Элиминация в строке {i+1} с множителем {format_number(factor)}:")
+                st.write(
+                    f"Элиминация в строке {i+1} с множителем {format_number(factor)}:"
+                )
                 latex_content += f"Элиминация в строке {i+1} с множителем {format_number(factor)}:\\\\\n"
                 st.latex(matrix_to_latex(a, line=True))
                 latex_content += r"\[" + matrix_to_latex(a, line=True) + r"\]" + "\n"
@@ -118,8 +129,8 @@ def gauss_sequential(a):
 
     # Обратный ход: обратная подстановка
     x = np.zeros(n)
-    for i in range(n-1, -1, -1):
-        x[i] = (a[i, -1] - np.dot(a[i, i+1:n], x[i+1:])) / a[i, i]
+    for i in range(n - 1, -1, -1):
+        x[i] = (a[i, -1] - np.dot(a[i, i + 1 : n], x[i + 1 :])) / a[i, i]
 
     columns = st.columns([1, 9])
     for i in range(n):
@@ -131,7 +142,9 @@ def gauss_sequential(a):
     st.subheader("Проверка")
     latex_content += r"\subsection*{Проверка}" + "\n"
     st.write("Исходная матрица, столбец свободных членов и решение задачи:")
-    latex_content += "Исходная матрица, столбец свободных членов и решение задачи:\\\\\n"
+    latex_content += (
+        "Исходная матрица, столбец свободных членов и решение задачи:\\\\\n"
+    )
     A = a_orig[:, :-1]
     b = a_orig[:, -1]
     columns = st.columns([1, 1, 1])
@@ -148,7 +161,9 @@ def gauss_sequential(a):
     latex_content += r"\[ Ax = " + matrix_to_latex(Ax) + r"\]" + "\n"
 
     # Вычисляем вектор невязок (разность b - Ax)
-    st.write("Вычисляем разность между исходным вектором свободных членов и вектором Ax:")
+    st.write(
+        "Вычисляем разность между исходным вектором свободных членов и вектором Ax:"
+    )
     latex_content += "Вычисляем разность между исходным вектором свободных членов и вектором Ax:\\\\\n"
     residual_vector = b - Ax
     columns = st.columns([1, 9])
@@ -165,7 +180,9 @@ def gauss_sequential(a):
 
     if residual_norm < tolerance:
         st.write("Решение системы проверено: невязка очень мала, система решена верно.")
-        latex_content += "Решение системы проверено: невязка очень мала, система решена верно.\\\\\n"
+        latex_content += (
+            "Решение системы проверено: невязка очень мала, система решена верно.\\\\\n"
+        )
     else:
         st.write("Обнаружена значительная невязка. Проверьте вычисления!")
         latex_content += "Обнаружена значительная невязка. Проверьте вычисления!\\\\\n"
@@ -178,21 +195,37 @@ def gauss_sequential(a):
 
 def display():
     st.title("Лабораторная работа 1. Методы решения задач линейной алгебры")
-    var_amount = st.number_input("Введите количество неизвестных системы", min_value=1, max_value=7)
-    column_alignment = [1]*(var_amount*2 + 1) + [15 - var_amount*2 - 1] if var_amount < 7 else [1] * 15
+    var_amount = st.number_input(
+        "Введите количество неизвестных системы", min_value=1, max_value=7
+    )
+    column_alignment = (
+        [1] * (var_amount * 2 + 1) + [15 - var_amount * 2 - 1]
+        if var_amount < 7
+        else [1] * 15
+    )
     columns = st.columns(column_alignment)
 
     quotient_matrix = [[0 for _ in range(var_amount + 1)] for _ in range(var_amount)]
-    for i in range((len(columns)-1) // 2):
-        for j in range((len(columns)-1) // 2):
-            quotient_matrix[i][j] = columns[j*2].number_input(label="Введите коэффициент", label_visibility="collapsed", value=0, key=f"var_input_{i}_{j}")
+    for i in range((len(columns) - 1) // 2):
+        for j in range((len(columns) - 1) // 2):
+            quotient_matrix[i][j] = columns[j * 2].number_input(
+                label="Введите коэффициент",
+                label_visibility="collapsed",
+                value=0,
+                key=f"var_input_{i}_{j}",
+            )
 
             var_num = j + 1
             if var_num < var_amount:
-                columns[j*2+1].latex(f"x_{var_num}+")
+                columns[j * 2 + 1].latex(f"x_{var_num}+")
             else:
-                columns[j*2+1].latex(f"x_{var_num}=")
-                quotient_matrix[i][j+1] = columns[j*2+2].number_input(label="Введите коэффициент", label_visibility="collapsed", value=0, key=f"free_var_input_{i}_{j}")
+                columns[j * 2 + 1].latex(f"x_{var_num}=")
+                quotient_matrix[i][j + 1] = columns[j * 2 + 2].number_input(
+                    label="Введите коэффициент",
+                    label_visibility="collapsed",
+                    value=0,
+                    key=f"free_var_input_{i}_{j}",
+                )
 
     if st.button("Решить систему"):
         with st.expander("Показать решение"):
