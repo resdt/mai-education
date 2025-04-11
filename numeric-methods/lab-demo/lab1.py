@@ -1,7 +1,8 @@
+import os
 import subprocess
 
-import streamlit as st
 import numpy as np
+import streamlit as st
 
 
 @st.fragment
@@ -16,7 +17,8 @@ def download_pdf_button(pdf_bytes, filename, label="Скачать PDF"):
 
 
 def compile_latex_to_pdf(latex_str):
-    with open("temp.tex", "w", encoding="utf-8") as f:
+    os.makedirs("tmp", exist_ok=True)
+    with open("tmp/temp.tex", "w", encoding="utf-8") as f:
         f.write(latex_str)
 
     try:
@@ -25,12 +27,13 @@ def compile_latex_to_pdf(latex_str):
                 "pdflatex",
                 "-interaction=nonstopmode",
                 "-halt-on-error",
+                "-output-directory=tmp",
                 "-jobname=temp",
-                "temp.tex",
+                "tmp/temp.tex",
             ]
         )
 
-        with open(f"temp.pdf", "rb") as f:
+        with open(f"tmp/temp.pdf", "rb") as f:
             pdf_bytes = f.read()
     except subprocess.CalledProcessError:
         print("Ошибка при компиляции LaTeX. Проверьте лог pdflatex.")
@@ -54,6 +57,7 @@ def matrix_to_latex(matrix, line=False):
     _, ncols = matrix.shape
     rows = [" & ".join(format_number(x) for x in row) for row in matrix]
     body = r" \\ ".join(rows)
+    print(body)
 
     if line and ncols > 1:
         spec = " ".join("c" for _ in range(ncols - 1)) + "|c"
@@ -62,133 +66,230 @@ def matrix_to_latex(matrix, line=False):
         return rf"\begin{{pmatrix}}{body}\end{{pmatrix}}"
 
 
-def gauss_sequential(a):
+def lu_decomposition(A, verbose=False):
+    n = A.shape[0]
+    L = np.eye(n)  # Единичная нижняя треугольная матрица
+    U = A.copy().astype(float)  # Копия исходной матрицы
+    P = np.eye(n)  # Матрица перестановок
+
+    pivot_amount = 0
+    for k in range(n - 1):
+        # Выбор главного элемента в столбце k
+        max_row = k + np.argmax(np.abs(U[k:, k]))
+
+        # Перестановка строк, если необходимо
+        if max_row != k:
+            if verbose:
+                print(f"Перестановка строк {k+1} и {max_row+1}")
+
+            pivot_amount += 1
+
+            U[[k, max_row]] = U[[max_row, k]]  # Для U
+
+            # Перестановка в уже вычисленной части L
+            if k > 0:
+                L[[k, max_row], :k] = L[[max_row, k], :k]
+
+            # Обновление матрицы перестановок
+            P[[k, max_row]] = P[[max_row, k]]
+
+        # Проверка на вырожденность
+        if abs(U[k, k]) < 1e-12:
+            raise ValueError(
+                f"Матрица вырождена на шаге {k+1} (диагональный элемент {U[k, k]})"
+            )
+
+        # Вычисление множителей и обновление подматрицы
+        for i in range(k + 1, n):
+            L[i, k] = U[i, k] / U[k, k]
+            U[i, k:] -= L[i, k] * U[k, k:]
+
+    return P, L, U, pivot_amount
+
+
+def solve_task(a):
     latex_content = r"""
 \documentclass{article}
 \usepackage[utf8]{inputenc}
 \usepackage[T2A]{fontenc}
 \usepackage[russian]{babel}
+\usepackage{amsmath}
 \begin{document}
 \section*{Решение системы}
     """
-    a_orig = a.copy()
+    n = a.shape[0]
+    A = a[:, :-1]
+    b = a[:, -1]
 
-    st.subheader("Исходная матрица:")
-    latex_content += r"\subsection*{Исходная матрица:}" + "\n"
-    st.latex(matrix_to_latex(a, line=True))
-    latex_content += r"\[ " + matrix_to_latex(a, line=True) + r"\]" + "\n"
+    st.subheader("Исходная матрица и вектор b:")
+    st.latex(r"A = " + matrix_to_latex(A))
+    st.latex(r"b = " + matrix_to_latex(b))
+    latex_content += r"\subsection*{Исходная матрица и вектор b:}" + "\n"
+    latex_content += r"\[ A = " + matrix_to_latex(A) + r" \]" + "\n"
+    latex_content += r"\[ b = " + matrix_to_latex(b) + r" \]" + "\n"
     st.divider()
 
-    n = a.shape[0]
+    # LU-разложение
+    st.subheader("LU-разложение")
+    try:
+        P, L, U, pivot_amount = lu_decomposition(A)
+        b_permuted = b @ P
+    except np.linalg.LinAlgError:
+        st.error("Матрица вырождена, LU-разложение невозможно")
+        return None
 
-    # Прямой ход метода Гаусса
-    for k in range(n - 1):
-        # Выбор опорного элемента: ищем максимальный по модулю элемент в столбце k начиная со строки k
-        max_index = np.argmax(np.abs(a[k:, k])) + k
+    st.latex(r"L = " + matrix_to_latex(L))
+    st.latex(r"U = " + matrix_to_latex(U))
+    latex_content += r"\subsection*{LU-разложение}" + "\n"
+    latex_content += r"\[ L = " + matrix_to_latex(L) + r" \]" + "\n"
+    latex_content += r"\[ U = " + matrix_to_latex(U) + r" \]" + "\n"
+    st.divider()
 
-        if np.abs(a[max_index, k]) < 1e-12:
-            st.error("Система вырожденная или имеет бесконечное множество решений")
-            latex_content += r"\end{document}"
-            return latex_content
+    # Решение Lz = b (прямая подстановка)
+    st.subheader("Решение системы Lz = b")
+    latex_content += r"\subsection*{Решение системы Lz = b (прямая подстановка)}" + "\n"
+    z = np.zeros(n)
+    for i in range(n):
+        sum_terms = []
+        sum_value = 0.0
+        for k in range(i):
+            coeff = L[i, k]
+            if abs(coeff) > 1e-10:  # Игнорируем нулевые коэффициенты
+                sum_terms.append(f"{format_number(coeff)} \cdot z_{k+1}")
+                sum_value += coeff * z[k]
 
-        st.subheader(
-            f"Шаг {k+1}: выбор опорного элемента для столбца {k+1} -> строка {max_index+1}"
-        )
-        latex_content += (
-            rf"\subsection*{{Шаг {k+1}: выбор опорного элемента для столбца {k+1} -> строка {max_index+1}}}"
-            + "\n"
-        )
+        z[i] = b_permuted[i] - sum_value
+        formula = rf"z_{i+1} = b_{i+1}"
+        if sum_terms:
+            formula += rf" - ({' + '.join(sum_terms)})"
 
-        # Если необходимо, меняем местами текущую строку k и строку с максимальным элементом
-        if max_index != k:
-            a[[k, max_index]] = a[[max_index, k]]
-            st.write(f"Перестановка строк {k+1} и {max_index+1}:")
-            latex_content += f"Перестановка строк {k+1} и {max_index+1}:\\\\\n"
-            st.latex(matrix_to_latex(a, line=True))
-            latex_content += r"\[" + matrix_to_latex(a, line=True) + r"\]" + "\n"
+        st.latex(formula + f" = {format_number(z[i])}")
+        latex_content += rf"\[ {formula} = {format_number(z[i])} \]" + "\n"
 
-        # Нормируем текущую строку
-        pivot = a[k, k]
+    st.latex(r"z = " + matrix_to_latex(z))
+    latex_content += r"\[ z = " + matrix_to_latex(z) + r" \]" + "\n"
+    st.divider()
 
-        # Прямой ход: зануляем элементы под опорным
-        for i in range(k + 1, n):
-            factor = a[i, k] / pivot
-            if factor != 0:
-                a[i, k:] = a[i, k:] - factor * a[k, k:]
-                st.write(
-                    f"Элиминация в строке {i+1} с множителем {format_number(factor)}:"
-                )
-                latex_content += f"Элиминация в строке {i+1} с множителем {format_number(factor)}:\\\\\n"
-                st.latex(matrix_to_latex(a, line=True))
-                latex_content += r"\[" + matrix_to_latex(a, line=True) + r"\]" + "\n"
-
-        st.divider()
-
-    st.subheader("Решение системы")
-    latex_content += r"\subsection*{Решение системы}" + "\n"
-
-    # Обратный ход: обратная подстановка
+    # Решение Ux = z (обратная подстановка)
+    st.subheader("Решение системы Ux = z")
+    latex_content += (
+        r"\subsection*{Решение системы Ux = z (обратная подстановка)}" + "\n"
+    )
     x = np.zeros(n)
     for i in range(n - 1, -1, -1):
-        x[i] = (a[i, -1] - np.dot(a[i, i + 1 : n], x[i + 1 :])) / a[i, i]
+        sum_terms = []
+        sum_value = 0.0
+        for k in range(i + 1, n):
+            coeff = U[i, k]
+            if abs(coeff) > 1e-10:
+                sum_terms.append(f"{format_number(coeff)} \cdot x_{k+1}")
+                sum_value += coeff * x[k]
 
-    columns = st.columns([1, 9])
-    for i in range(n):
-        columns[0].latex(f"x_{i+1}={format_number(x[i])}")
-        latex_content += rf"\[ x_{{{i+1}}} = {format_number(x[i])} \]" + "\n"
+        x[i] = (z[i] - sum_value) / U[i, i]
+        formula = rf"x_{i+1} = \frac{{z_{i+1}"
+        if sum_terms:
+            formula += rf" - ({' + '.join(sum_terms)})"
+        formula += rf"}}{{{format_number(U[i,i])}}}"
 
+        st.latex(formula + f" = {format_number(x[i])}")
+        latex_content += rf"\[ {formula} = {format_number(x[i])} \]" + "\n"
+
+    st.latex(r"x = " + matrix_to_latex(x))
+    latex_content += r"\[ x = " + matrix_to_latex(x) + r" \]" + "\n"
     st.divider()
 
-    st.subheader("Проверка")
-    latex_content += r"\subsection*{Проверка}" + "\n"
-    st.write("Исходная матрица, столбец свободных членов и решение задачи:")
-    latex_content += (
-        "Исходная матрица, столбец свободных членов и решение задачи:\\\\\n"
-    )
-    A = a_orig[:, :-1]
-    b = a_orig[:, -1]
-    columns = st.columns([1, 1, 1])
-    columns[0].latex(r"A = " + matrix_to_latex(A))
-    columns[1].latex(r"b = " + matrix_to_latex(b))
-    columns[2].latex(r"x = " + matrix_to_latex(x))
+    # Дополнительные вычисления (определитель, обратная матрица)
+    sign = (-1) ** pivot_amount  # Учет перестановок строк
+    det_lu = sign * np.prod(np.diag(U))
+    st.subheader("Определитель матрицы")
+    st.latex(r"\det(A) = " + format_number(det_lu))
+    latex_content += r"\subsection*{Определитель матрицы}" + "\n"
+    latex_content += rf"\[ \det(A) = {format_number(det_lu)} \]" + "\n"
+    st.divider()
 
-    # Вычисляем A*x
-    st.write("Вычисляем произведение исходной матрицы на вектор ответа:")
-    latex_content += "Вычисляем произведение исходной матрицы на вектор ответа:\\\\\n"
-    Ax = A.dot(x)
-    columns = st.columns([1, 9])
-    columns[0].latex(r"Ax = " + matrix_to_latex(Ax))
-    latex_content += r"\[ Ax = " + matrix_to_latex(Ax) + r"\]" + "\n"
+    # 1. Проверка невязки Ax - b
+    st.subheader("Проверка невязки")
+    latex_content += r"\subsection*{Проверка невязки}" + "\n"
 
-    # Вычисляем вектор невязок (разность b - Ax)
-    st.write(
-        "Вычисляем разность между исходным вектором свободных членов и вектором Ax:"
-    )
-    latex_content += "Вычисляем разность между исходным вектором свободных членов и вектором Ax:\\\\\n"
-    residual_vector = b - Ax
-    columns = st.columns([1, 9])
-    columns[0].latex(r"b - Ax = " + matrix_to_latex(residual_vector))
-    latex_content += r"\[ b - Ax = " + matrix_to_latex(residual_vector) + r"\]" + "\n"
+    residual = A @ x - b
+    residual_norm = np.linalg.norm(residual)
 
-    # Норма невязок
-    st.write("Вычисляем норму невязок:")
-    latex_content += "Вычисляем норму невязок:\\\\\n"
-    residual_norm = np.linalg.norm(residual_vector)
-    tolerance = 1e-6
-    st.latex(r"\|b - Ax\| = " + f"{residual_norm:.2e}")
-    latex_content += rf"\[ \|b - Ax\| = {residual_norm:.2e} \]" + "\n"
+    st.latex(r"Ax - b = " + matrix_to_latex(residual))
+    st.latex(r"\|Ax - b\| = " + f"{residual_norm:.2e}")
 
-    if residual_norm < tolerance:
-        st.write("Решение системы проверено: невязка очень мала, система решена верно.")
-        latex_content += (
-            "Решение системы проверено: невязка очень мала, система решена верно.\\\\\n"
-        )
+    latex_content += r"\[ Ax - b = " + matrix_to_latex(residual) + r" \]" + "\n"
+    latex_content += rf"\[ \|Ax - b\| = {residual_norm:.2e} \]" + "\n"
+
+    if residual_norm < 1e-8:
+        st.success("Невязка минимальна, решение корректно!")
+        latex_content += r"\textbf{Невязка минимальна, решение корректно!}" + "\n"
     else:
-        st.write("Обнаружена значительная невязка. Проверьте вычисления!")
-        latex_content += "Обнаружена значительная невязка. Проверьте вычисления!\\\\\n"
+        st.warning("Обнаружена значительная невязка!")
+        latex_content += r"\textbf{Обнаружена значительная невязка!}" + "\n"
+    st.divider()
+
+    # 2. Проверка обратной матрицы
+    st.subheader("Проверка обратной матрицы")
+    latex_content += r"\subsection*{Проверка обратной матрицы}" + "\n"
+
+    try:
+        A_inv = np.linalg.inv(A)
+        I_calculated = A @ A_inv
+        I_error = np.linalg.norm(I_calculated - np.eye(n))
+
+        st.latex(r"A^{-1} = " + matrix_to_latex(A_inv))
+        st.latex(r"A \cdot A^{-1} = " + matrix_to_latex(I_calculated))
+        st.latex(r"\|A \cdot A^{-1} - I\| = " + f"{I_error:.2e}")
+
+        latex_content += r"\[ A^{-1} = " + matrix_to_latex(A_inv) + r" \]" + "\n"
+        latex_content += (
+            r"\[ A \cdot A^{-1} = " + matrix_to_latex(I_calculated) + r" \]" + "\n"
+        )
+        latex_content += rf"\[ \|A \cdot A^{-1} - I\| = {I_error:.2e} \]" + "\n"
+
+        if I_error < 1e-8:
+            st.success("Обратная матрица вычислена верно!")
+            latex_content += r"\textbf{Обратная матрица вычислена верно!}" + "\n"
+        else:
+            st.warning("Возможная ошибка в вычислении обратной матрицы!")
+            latex_content += (
+                r"\textbf{Возможная ошибка в вычислении обратной матрицы!}" + "\n"
+            )
+
+    except np.linalg.LinAlgError:
+        st.error("Матрица вырождена, обратной матрицы не существует")
+        latex_content += (
+            r"\textbf{Матрица вырождена, обратной матрицы не существует}" + "\n"
+        )
+    st.divider()
+
+    # 3. Проверка определителя
+    st.subheader("Проверка определителя")
+    latex_content += r"\subsection*{Проверка определителя}" + "\n"
+
+    det_numpy = np.linalg.det(A)  # Эталонное значение
+    rel_error = (
+        abs(det_lu - det_numpy) / abs(det_numpy) if det_numpy != 0 else float("inf")
+    )
+
+    st.latex(r"\det(A)_{\text{LU}} = " + format_number(det_lu))
+    st.latex(r"\det(A)_{\text{numpy}} = " + format_number(det_numpy))
+    st.latex(r"Относительная\ ошибка = " + f"{rel_error:.2e}")
+
+    latex_content += rf"\[ \det(A)_{{\text{{LU}}}} = {format_number(det_lu)} \]" + "\n"
+    latex_content += (
+        rf"\[ \det(A)_{{\text{{numpy}}}} = {format_number(det_numpy)} \]" + "\n"
+    )
+    latex_content += rf"\[ \text{{Относительная ошибка}} = {rel_error:.2e} \]" + "\n"
+
+    if rel_error < 1e-8:
+        st.success("Определитель вычислен верно!")
+        latex_content += r"\textbf{Определитель вычислен верно!}" + "\n"
+    else:
+        st.warning("Возможная ошибка в вычислении определителя!")
+        latex_content += r"\textbf{Возможная ошибка в вычислении определителя!}" + "\n"
 
     latex_content += r"\end{document}"
-
     pdf_bytes = compile_latex_to_pdf(latex_content)
     return pdf_bytes
 
@@ -229,7 +330,7 @@ def display():
 
     if st.button("Решить систему"):
         with st.expander("Показать решение"):
-            pdf_bytes = gauss_sequential(np.array(quotient_matrix, dtype=float).copy())
+            pdf_bytes = solve_task(np.array(quotient_matrix, dtype=float).copy())
 
         download_pdf_button(pdf_bytes, filename="solution.pdf")
 
