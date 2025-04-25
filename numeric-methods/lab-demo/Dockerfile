@@ -17,7 +17,7 @@ WORKDIR /app
 COPY . /app
 
 # Install dependencies
-RUN uv sync --frozen --no-dev
+RUN uv sync --frozen --no-dev --no-cache-dir
 
 # Expose the port the app will use
 EXPOSE 8501
