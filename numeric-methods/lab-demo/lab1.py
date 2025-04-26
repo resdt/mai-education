@@ -695,40 +695,46 @@ def solve_qr(a, epsilon, max_iter=1000):
 def display():
     st.title("Лабораторная работа 1. Методы решения задач линейной алгебры")
 
-    st.header("LU-разложение")
-    quotient_matrix = st_elements.system_input(key="lu")
+    st.header("1.1 LU-разложение")
+    use_var_matrix = st.checkbox("Подставить значения варианта", key="check_lu")
+    if not use_var_matrix:
+        quotient_matrix = st_elements.system_input(key="lu")
+    else:
+        quotient_matrix = np.array(
+            [
+                [1, 2, -2, 6, 24],
+                [-3, -5, 14, 13, 41],
+                [1, 2, -2, -2, 0],
+                [-2, -4, 5, 10, 20],
+            ],
+            dtype=float,
+        )
     if st.button("Решить систему", key="lu"):
-        # quotient_matrix = np.array(
-        #     [
-        #         [1, 2, -2, 6, 24],
-        #         [-3, -5, 14, 13, 41],
-        #         [1, 2, -2, -2, 0],
-        #         [-2, -4, 5, 10, 20],
-        #     ],
-        #     dtype=float,
-        # )
         with st.expander("Показать решение"):
             pdf_bytes = solve_lu(np.array(quotient_matrix, dtype=float).copy())
         st_elements.download_pdf_button(pdf_bytes, filename="solution_lu.pdf")
 
-    st.header("Метод прогонки")
-    quotient_matrix = st_elements.system_input(key="tm")
+    st.header("1.2 Метод прогонки")
+    use_var_matrix = st.checkbox("Подставить значения варианта", key="check_tm")
+    if not use_var_matrix:
+        quotient_matrix = st_elements.system_input(key="tm")
+    else:
+        quotient_matrix = np.array(
+            [
+                [-11, -9, 0, 0, 0, -122],
+                [5, -15, -2, 0, 0, -48],
+                [0, -8, 11, -3, 0, -14],
+                [0, 0, 6, -15, 4, -50],
+                [0, 0, 0, 3, 6, 42],
+            ],
+            dtype=float,
+        )
     if st.button("Решить систему", key="tm"):
-        # quotient_matrix = np.array(
-        #     [
-        #         [-11, -9, 0, 0, 0, -122],
-        #         [5, -15, -2, 0, 0, -48],
-        #         [0, -8, 11, -3, 0, -14],
-        #         [0, 0, 6, -15, 4, -50],
-        #         [0, 0, 0, 3, 6, 42],
-        #     ],
-        #     dtype=float,
-        # )
         with st.expander("Показать решение"):
             pdf_bytes = solve_thomas(np.array(quotient_matrix, dtype=float).copy())
         st_elements.download_pdf_button(pdf_bytes, filename="solution_thomas.pdf")
 
-    st.header("Метод простых итераций и метод Зейделя")
+    st.header("1.3 Метод простых итераций и метод Зейделя")
     prec = st.number_input(
         "Введите точность метода (знаков после запятой)",
         min_value=1,
@@ -736,17 +742,20 @@ def display():
         key="prec_zm",
     )
     epsilon = float(f"1e-{prec}")
-    quotient_matrix = st_elements.system_input(key="zm")
+    use_var_matrix = st.checkbox("Подставить значения варианта", key="check_zm")
+    if not use_var_matrix:
+        quotient_matrix = st_elements.system_input(key="zm")
+    else:
+        quotient_matrix = np.array(
+            [
+                [19, -4, -9, -1, 100],
+                [-2, 20, -2, -7, -5],
+                [6, -5, -25, 9, 34],
+                [0, -3, -9, 12, 69],
+            ],
+            dtype=float,
+        )
     if st.button("Решить систему", key="zm"):
-        # quotient_matrix = np.array(
-        #     [
-        #         [19, -4, -9, -1, 100],
-        #         [-2, 20, -2, -7, -5],
-        #         [6, -5, -25, 9, 34],
-        #         [0, -3, -9, 12, 69],
-        #     ],
-        #     dtype=float,
-        # )
         a = np.array(quotient_matrix, dtype=float).copy()
         A = a[:, :-1]
         b = a[:, -1]
@@ -754,7 +763,7 @@ def display():
             pdf_bytes = solve_iter_and_zeidel(A, b, epsilon=epsilon)
         st_elements.download_pdf_button(pdf_bytes, filename="solution_zeidel.pdf")
 
-    st.header("Метод вращений")
+    st.header("1.4 Метод вращений")
     prec = st.number_input(
         "Введите точность метода (знаков после запятой)",
         min_value=1,
@@ -762,19 +771,22 @@ def display():
         key="prec_pm",
     )
     epsilon = float(f"1e-{prec}")
-    quotient_matrix = st_elements.matrix_input(key="pm")
+    use_var_matrix = st.checkbox("Подставить значения варианта", key="check_pm")
+    if not use_var_matrix:
+        quotient_matrix = st_elements.matrix_input(key="pm")
+    else:
+        quotient_matrix = np.array(
+            [[-7, 4, 5], [4, -6, -9], [5, -9, -8]],
+            dtype=float,
+        )
     if st.button("Решить систему", key="pm"):
-        # quotient_matrix = np.array(
-        #     [[-7, 4, 5], [4, -6, -9], [5, -9, -8]],
-        #     dtype=float,
-        # )
         a = np.array(quotient_matrix, dtype=float).copy()
         with st.expander("Показать решение"):
             pdf_bytes, fig = solve_pivot(a, epsilon=epsilon)
             st.plotly_chart(fig)
         st_elements.download_pdf_button(pdf_bytes, filename="solution_pivot.pdf")
 
-    st.header("Метод QR-разложения матриц")
+    st.header("1.5 Метод QR-разложения матриц")
     prec = st.number_input(
         "Введите точность метода (знаков после запятой)",
         min_value=1,
@@ -782,12 +794,15 @@ def display():
         key="prec_qr",
     )
     epsilon = float(f"1e-{prec}")
-    quotient_matrix = st_elements.matrix_input(key="qr")
+    use_var_matrix = st.checkbox("Подставить значения варианта", key="check_qr")
+    if not use_var_matrix:
+        quotient_matrix = st_elements.matrix_input(key="qr")
+    else:
+        quotient_matrix = np.array(
+            [[3, -7, -1], [-9, -8, 7], [5, 2, 2]],
+            dtype=float,
+        )
     if st.button("Решить систему", key="qr"):
-        # quotient_matrix = np.array(
-        #     [[3, -7, -1], [-9, -8, 7], [5, 2, 2]],
-        #     dtype=float,
-        # )
         a = np.array(quotient_matrix, dtype=float).copy()
         with st.expander("Показать решение"):
             pdf_bytes = solve_qr(a, epsilon=epsilon)
