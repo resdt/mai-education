@@ -26,6 +26,7 @@
                 "python.terminal.activateEnvironment": false
             },
             "extensions": [
+                "amazonwebservices.amazon-q-vscode",
                 "ms-python.python",
                 "ms-python.black-formatter",
                 "ms-python.isort",

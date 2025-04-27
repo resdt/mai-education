@@ -421,9 +421,9 @@ def solve_iter_and_zeidel(A, b, epsilon, max_iterations=1000):
 
     n = len(b)
 
-    # Метод простых итераций (Якоби)
-    st.subheader("Метод простых итераций (Якоби):")
-    latex_content += r"\subsection*{Метод простых итераций (Якоби):}"
+    # Метод простых итераций
+    st.subheader("Метод простых итераций:")
+    latex_content += r"\subsection*{Метод простых итераций:}"
     x = np.zeros(n)
     for iteration in range(max_iterations):
         x_new = np.zeros(n)
@@ -602,9 +602,10 @@ def solve_pivot(a, epsilon):
         xaxis_title="Количество итераций",
         yaxis_title="Среднеквадратичная погрешность",
     )
+    st.plotly_chart(fig)
 
     pdf_bytes = utils.compile_latex_to_pdf(latex_content)
-    return pdf_bytes, fig
+    return pdf_bytes
 
 
 def solve_qr(a, epsilon, max_iter=1000):
@@ -782,8 +783,7 @@ def display():
     if st.button("Решить систему", key="pm"):
         a = np.array(quotient_matrix, dtype=float).copy()
         with st.expander("Показать решение"):
-            pdf_bytes, fig = solve_pivot(a, epsilon=epsilon)
-            st.plotly_chart(fig)
+            pdf_bytes = solve_pivot(a, epsilon=epsilon)
         st_elements.download_pdf_button(pdf_bytes, filename="solution_pivot.pdf")
 
     st.header("1.5 Метод QR-разложения матриц")
