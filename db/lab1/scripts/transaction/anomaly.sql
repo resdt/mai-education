@@ -12,16 +12,16 @@
 
 -- Сеанс 1
 BEGIN ISOLATION LEVEL READ COMMITTED;
-SELECT role FROM users WHERE email = 'MatthewAnderson1@gmail.com';
+SELECT role FROM users WHERE email = 'BarbaraMorgan1@gmail.com';
 -- не выполняй COMMIT
 
 -- Сеанс 2
 BEGIN;
-UPDATE users SET role = 'admin' WHERE email = 'MatthewAnderson1@gmail.com';
+UPDATE users SET role = 'admin' WHERE email = 'BarbaraMorgan1@gmail.com';
 COMMIT;
 
 -- Сеанс 1
-SELECT role FROM users WHERE email = 'MatthewAnderson1@gmail.com';
+SELECT role FROM users WHERE email = 'BarbaraMorgan1@gmail.com';
 COMMIT;
 
 -- Ожидаемый эффект: роль изменилась между двумя SELECT в одной транзакции.
@@ -40,11 +40,11 @@ SELECT COUNT(*) FROM users WHERE money_spent > 9000;
 -- Сеанс 2
 BEGIN;
 INSERT INTO users (first_name, last_name, email, role, money_spent, category)
-VALUES ('Phantom', 'User', 'phantom@example.com', 'user', 9500, 'gold');
+VALUES ('Phantom', 'User', 'phantom2@example.com', 'user', 9500, 'gold');
 COMMIT;
 
 -- Сеанс 1
-SELECT COUNT(*) FROM users WHERE money_spent > 9000;
+SELECT COUNT(*) FROM users WHERE money_spent > 9000 LIMIT 100;
 COMMIT;
 
 -- Ожидаемый эффект: количество увеличилось — "появился фантом".
@@ -56,20 +56,20 @@ COMMIT;
 -- Возможна при уровне: READ COMMITTED
 
 -- Предподготовка (один раз)
-UPDATE users SET money_spent = 1000 WHERE email = 'MatthewAnderson1@gmail.com';
+UPDATE users SET money_spent = 1000 WHERE email = 'BarbaraMorgan1@gmail.com';
 
 -- Сеанс 1
 BEGIN ISOLATION LEVEL READ COMMITTED;
-SELECT money_spent FROM users WHERE email = 'MatthewAnderson1@gmail.com';
+SELECT money_spent FROM users WHERE email = 'BarbaraMorgan1@gmail.com';
 -- предположим: получено 1000
-UPDATE users SET money_spent = 1000 + 200 WHERE email = 'MatthewAnderson1@gmail.com';
+UPDATE users SET money_spent = 1000 + 200 WHERE email = 'BarbaraMorgan1@gmail.com';
 -- не коммитим
 
 -- Сеанс 2
 BEGIN;
-SELECT money_spent FROM users WHERE email = 'MatthewAnderson1@gmail.com';
+SELECT money_spent FROM users WHERE email = 'BarbaraMorgan1@gmail.com';
 -- предположим: тоже 1000
-UPDATE users SET money_spent = 1000 + 500 WHERE email = 'MatthewAnderson1@gmail.com';
+UPDATE users SET money_spent = 1000 + 500 WHERE email = 'BarbaraMorgan1@gmail.com';
 COMMIT;
 
 -- Сеанс 1
